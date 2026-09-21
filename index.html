@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>BUS 4040 Quiz Simulator</title>
+<style>
+  :root {
+    --gold: #F1C500;
+    --gold-dim: #b89600;
+    --bg: #000000;
+    --panel: #121212;
+    --panel-2: #1b1b1b;
+    --line: #2e2e2e;
+    --text: #f4f4f4;
+    --muted: #bdbdbd;
+    --good: #6fe3a0;
+    --bad: #ff8a8a;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 64px; }
+
+  header.top { border-bottom: 3px solid var(--gold); padding-bottom: 14px; margin-bottom: 24px; }
+  header.top .course { color: var(--gold); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; font-size: .8rem; }
+  header.top h1 { margin: 4px 0 0; font-size: 1.7rem; }
+
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+  h2 { margin: 0 0 12px; font-size: 1.25rem; color: var(--gold); }
+  p { margin: 0 0 12px; }
+  ul.plain { margin: 0 0 16px; padding-left: 20px; }
+  ul.plain li { margin-bottom: 6px; }
+
+  button {
+    font: inherit; cursor: pointer; border-radius: 10px; border: 2px solid transparent;
+    padding: 12px 20px; font-weight: 700;
+  }
+  button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+  .btn-primary { background: var(--gold); color: #000; }
+  .btn-primary:hover { background: #ffd82e; }
+  .btn-secondary { background: transparent; color: var(--gold); border-color: var(--gold); }
+  .btn-secondary:hover { background: rgba(241,197,0,.12); }
+  .btn-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 8px; }
+
+  /* progress */
+  .progress-meta { display: flex; justify-content: space-between; color: var(--muted); font-size: .9rem; margin-bottom: 8px; }
+  .bar { height: 8px; background: var(--panel-2); border-radius: 99px; overflow: hidden; margin-bottom: 20px; }
+  .bar > span { display: block; height: 100%; background: var(--gold); width: 0; transition: width .3s; }
+
+  .q-text { font-size: 1.25rem; font-weight: 600; margin: 0 0 18px; }
+  .tag { display: inline-block; border: 1px solid var(--gold-dim); color: var(--gold); border-radius: 99px; padding: 2px 10px; font-size: .78rem; font-weight: 700; margin-bottom: 12px; }
+
+  .options { display: grid; gap: 10px; margin: 0 0 18px; padding: 0; list-style: none; }
+  .option {
+    width: 100%; text-align: left; background: var(--panel-2); color: var(--text);
+    border: 2px solid var(--line); display: flex; gap: 12px; align-items: flex-start;
+    font-weight: 500; padding: 14px 16px;
+  }
+  .option:hover:not(:disabled) { border-color: var(--gold); }
+  .option .letter {
+    flex: none; width: 28px; height: 28px; border-radius: 50%;
+    background: #000; border: 2px solid var(--gold-dim); color: var(--gold);
+    display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: .85rem;
+  }
+  .option:disabled { cursor: default; }
+  .option.correct { border-color: var(--good); background: rgba(111,227,160,.10); }
+  .option.wrong { border-color: var(--bad); background: rgba(255,138,138,.10); }
+  .option .mark { margin-left: auto; font-weight: 700; white-space: nowrap; }
+  .option.correct .mark { color: var(--good); }
+  .option.wrong .mark { color: var(--bad); }
+
+  .feedback { border-left: 5px solid var(--gold); background: var(--panel-2); border-radius: 8px; padding: 16px 18px; margin-bottom: 18px; }
+  .feedback.good { border-left-color: var(--good); }
+  .feedback.bad { border-left-color: var(--bad); }
+  .feedback .verdict { font-weight: 800; font-size: 1.1rem; margin-bottom: 6px; }
+  .feedback.good .verdict { color: var(--good); }
+  .feedback.bad .verdict { color: var(--bad); }
+  .feedback .review { color: var(--gold); font-weight: 700; margin-top: 10px; margin-bottom: 0; }
+
+  /* results */
+  .score-big { font-size: 3rem; font-weight: 800; color: var(--gold); line-height: 1.1; }
+  .score-sub { color: var(--muted); margin-bottom: 20px; }
+  .week-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 0 0 22px; }
+  .week-box { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .week-box .wk { color: var(--gold); font-weight: 700; }
+  .week-box .wv { font-size: 1.3rem; font-weight: 700; }
+  .missed-list { list-style: none; margin: 0 0 20px; padding: 0; display: grid; gap: 10px; }
+  .missed-list li { background: var(--panel-2); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; }
+  .missed-list .mq { font-weight: 600; margin-bottom: 4px; }
+  .missed-list .ma { color: var(--good); }
+  .missed-list .mw { color: var(--gold); font-size: .9rem; font-weight: 700; }
+
+  .hidden { display: none !important; }
+  footer { color: var(--muted); font-size: .8rem; text-align: center; margin-top: 28px; }
+
+  @media (max-width: 480px) {
+    .card { padding: 18px; }
+    header.top h1 { font-size: 1.4rem; }
+    .q-text { font-size: 1.1rem; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="course">BUS 4040 · AI for Business Applications</div>
+    <h1>Quiz Simulator</h1>
+  </header>
+
+  <main>
+    <!-- Start screen -->
+    <section id="screen-start" class="card">
+      <h2>Ready to test yourself?</h2>
+      <p>This quiz covers the class material from Weeks 1 through 3.</p>
+      <ul class="plain">
+        <li>20 questions, a mix of multiple choice and true/false</li>
+        <li>One question at a time, in a new order every run</li>
+        <li>You find out right away if you were right, and why</li>
+        <li>Every answer tells you which week to review</li>
+        <li>At the end, you can retry just the ones you missed</li>
+      </ul>
+      <div class="btn-row"><button id="btn-start" class="btn-primary">Start quiz</button></div>
+    </section>
+
+    <!-- Question screen -->
+    <section id="screen-quiz" class="hidden">
+      <div class="progress-meta">
+        <span id="progress-text"></span>
+        <span id="score-text"></span>
+      </div>
+      <div class="bar" aria-hidden="true"><span id="bar-fill"></span></div>
+      <div class="card">
+        <span class="tag" id="q-type"></span>
+        <p class="q-text" id="q-text"></p>
+        <ul class="options" id="options"></ul>
+        <div id="feedback" class="feedback hidden" role="status" aria-live="polite" tabindex="-1"></div>
+        <div class="btn-row"><button id="btn-next" class="btn-primary hidden"></button></div>
+      </div>
+    </section>
+
+    <!-- Results screen -->
+    <section id="screen-results" class="card hidden">
+      <h2 id="res-title">Your results</h2>
+      <div class="score-big" id="res-score"></div>
+      <div class="score-sub" id="res-sub"></div>
+      <div id="res-weeks-wrap">
+        <h2>By week</h2>
+        <div class="week-grid" id="res-weeks"></div>
+      </div>
+      <div id="res-missed-wrap">
+        <h2>Questions to review</h2>
+        <ul class="missed-list" id="res-missed"></ul>
+      </div>
+      <div class="btn-row">
+        <button id="btn-retry" class="btn-primary hidden"></button>
+        <button id="btn-restart" class="btn-secondary">Start a new quiz</button>
+      </div>
+    </section>
+  </main>
+
+  <footer>Questions come only from the Week 1–3 class narratives.</footer>
+</div>
+
+<script>
+"use strict";
+
+/* ---------------------------------------------------------------
+   Question bank — 20 questions, all taken from the class-material
+   narratives. `answer` is the index of the correct option.
+   True/false questions always list True first, then False.
+---------------------------------------------------------------- */
+const TF = ["True", "False"];
+
+const QUESTIONS = [
+  /* ---------- Week 1 ---------- */
+  {
+    week: 1, slide: "Slide 3 – Course Overview", type: "tf",
+    q: "In this class, you are expected to learn how to program.",
+    options: TF, answer: 1,
+    why: "The course overview says you will not learn to program in this class. AI does the building, and you decide what gets built with the tools."
+  },
+  {
+    week: 1, slide: "Slide 2 – Expectations", type: "mc",
+    q: "Which part of your grade is worth the least, at 5%?",
+    options: ["GitHub Setup", "AI Tools", "Final Exam", "Peer Review"], answer: 0,
+    why: "GitHub Setup is 5% (GitHub connectivity and a successful Pull Request). AI Tools and the Final Exam are each 10%, and Peer Review is 15%."
+  },
+  {
+    week: 1, slide: "Slide 4 – Why is a Business School Teaching an AI Course", type: "mc",
+    q: "Until recently, what was the bottleneck in building software?",
+    options: [
+      "Expert human software engineers",
+      "The cost of computers",
+      "Not having a GitHub account",
+      "Too few business leaders"
+    ], answer: 0,
+    why: "The bottleneck was expert human software engineers. The person with the business problem described it roughly, handed it off, and hoped for an acceptable outcome. AI is removing this bottleneck and shifting the work \"left\" toward business leaders and product owners."
+  },
+  {
+    week: 1, slide: "Slide 3 – Course Overview", type: "mc",
+    q: "In the course arc, which step comes right after \"customer interview\"?",
+    options: ["Requirements", "SPEC", "Data layer", "Packaging"], answer: 0,
+    why: "The arc is: tools → process overview → customer interview → requirements → SPEC → data layer → AI builds working app → packaging."
+  },
+  {
+    week: 1, slide: "Slide 2 – Expectations", type: "tf",
+    q: "Everything on the final exam will be discussed in class.",
+    options: TF, answer: 0,
+    why: "The expectations slide says there is a final and everything in it will be discussed in class. The instructor is not there to trick you."
+  },
+
+  /* ---------- Week 2 ---------- */
+  {
+    week: 2, slide: "Slide 3 – A Short History of Version Control", type: "mc",
+    q: "Who created Git in 2005 for Linux kernel development?",
+    options: ["Linus Torvalds", "Ryan Carlyle", "Anthropic", "A team at U of I"], answer: 0,
+    why: "Linus Torvalds created Git after the Linux kernel project lost access to its proprietary tool. He released it as a free, fast, and decentralized code versioning framework."
+  },
+  {
+    week: 2, slide: "Slide 3 – A Short History of Version Control", type: "tf",
+    q: "With Git, every developer holds a full copy of the entire history.",
+    options: TF, answer: 0,
+    why: "Git is decentralized. Every developer has the full history, so there is no single bottleneck or single point of failure."
+  },
+  {
+    week: 2, slide: "Slide 4 – Git and GitHub Overview", type: "mc",
+    q: "When you create a repo on GitHub, why should you turn on \"Add README\"?",
+    options: [
+      "It creates an initial commit that maps the repo to the main branch",
+      "It copies the repo to your computer",
+      "It creates a Pull Request for you",
+      "It connects your @uidaho.edu email to the repo"
+    ], answer: 0,
+    why: "The slide says this is important because creating the README creates an initial commit that maps the repo to the main branch."
+  },
+  {
+    week: 2, slide: "Slide 5 – Pictures are Better", type: "mc",
+    q: "Which command copies a repo from GitHub to your local computer?",
+    options: ["clone", "checkout", "commit", "push"], answer: 0,
+    why: "`clone` copies the repo from GitHub to your local computer. `checkout` creates a new branch, `commit` updates your local branch, and `push` updates the branch on GitHub."
+  },
+  {
+    week: 2, slide: "Slide 5 – Pictures are Better", type: "tf",
+    q: "The `git add` command sends your files to GitHub.",
+    options: TF, answer: 1,
+    why: "`add` only stages the files that will be added to the branch. `commit` updates your local branch, and `push` is what updates the remote branch on GitHub."
+  },
+  {
+    week: 2, slide: "Slide 4 – Git and GitHub Overview", type: "mc",
+    q: "In the hotel webpage example, what happens after you write the short micro-SPEC?",
+    options: [
+      "AI builds a much more detailed plan, which is fed back into AI to produce index.html",
+      "You write index.html by hand",
+      "You merge straight into main without a Pull Request",
+      "You clone the repo a second time"
+    ], answer: 0,
+    why: "AI builds a much more detailed plan from the micro-SPEC. That plan is fed back into AI, and the output is the index.html file."
+  },
+
+  /* ---------- Week 3 ---------- */
+  {
+    week: 3, slide: "Slide 2 – AI in General", type: "mc",
+    q: "According to Week 3, how does AI produce its output?",
+    options: [
+      "It takes text in and uses math to predict the next word",
+      "It searches the web and copies an answer",
+      "A human expert writes each reply",
+      "It runs your code and reports the result"
+    ], answer: 0,
+    why: "AI takes text in and produces text out. You give it words, and it uses math to predict the next word."
+  },
+  {
+    week: 3, slide: "Slide 3 – AI Models", type: "mc",
+    q: "Which Claude model is described as the cost effective everyday workhorse?",
+    options: ["Sonnet", "Fable", "Opus", "Haiku"], answer: 0,
+    why: "Sonnet is the everyday workhorse. Fable is the top end model for the hardest problems, Opus is a step up from Sonnet at roughly twice the cost, and Haiku is fast, cheap, and less capable."
+  },
+  {
+    week: 3, slide: "Slide 3 – AI Models", type: "tf",
+    q: "Opus is a solid step up in capability from Sonnet, at roughly twice the cost.",
+    options: TF, answer: 0,
+    why: "That is how Week 3 describes it. Opus offers more capability than Sonnet, at roughly twice the cost."
+  },
+  {
+    week: 3, slide: "Slide 3 – AI Models", type: "mc",
+    q: "Which of these models can you download and run on your own hardware?",
+    options: ["Llama", "Claude", "GPT", "Gemini"], answer: 0,
+    why: "Llama is an open weight model, which can be downloaded and run on your own hardware (Qwen and Gemma are others). Closed models like Claude, GPT, and Gemini run on the vendor's servers, and you rent access."
+  },
+  {
+    week: 3, slide: "Slide 4 – Parameters & Tokens", type: "mc",
+    q: "Roughly how much text is one token?",
+    options: [
+      "About 3/4 of an average English word",
+      "One full sentence",
+      "One letter",
+      "One page"
+    ], answer: 0,
+    why: "Tokens are chunks of text, roughly 3/4 of an English word on average. Short common words are one token, and longer or unusual words get split into several."
+  },
+  {
+    week: 3, slide: "Slide 4 – Parameters & Tokens", type: "tf",
+    q: "A long chat costs more per message than a short one, because every turn resends the whole conversation.",
+    options: TF, answer: 0,
+    why: "You pay per token, and every turn resends the whole conversation. Long chat history burns more tokens, and large context windows can also cause AI sessions to drift off track."
+  },
+  {
+    week: 3, slide: "Slide 5 – Harnesses vs. Models", type: "mc",
+    q: "Week 3 compares a harness and a model to a music player and music. Which is which?",
+    options: [
+      "The harness is the music player, and the model is the music",
+      "The harness is the music, and the model is the music player",
+      "Both are the music player",
+      "Both are the music"
+    ], answer: 0,
+    why: "A harness is the program you use to interact with an AI model (like the Claude app or Claude Code). The model is the AI behind it."
+  },
+  {
+    week: 3, slide: "Slide 5 – Harnesses vs. Models", type: "mc",
+    q: "What is CLAUDE.md?",
+    options: [
+      "A standing instruction file Claude reads every session",
+      "A command that starts a fresh conversation",
+      "The file that holds the hotel webpage",
+      "A list of everything Claude remembers about you"
+    ], answer: 0,
+    why: "CLAUDE.md is a standing instruction file Claude reads every session. A global one applies to all your work, and a project one applies to a single folder. (The command that starts a fresh conversation is /clear.)"
+  },
+  {
+    week: 3, slide: "Slide 6 – The Models You Will Use", type: "tf",
+    q: "You need the command line interface (CLI) to complete this class.",
+    options: TF, answer: 1,
+    why: "The CLI is more complicated and much more powerful, but you do not need it for this class. You should know it exists and roughly what it provides. The GUI works fine."
+  }
+];
+
+/* ---------------------------------------------------------------
+   Helpers
+---------------------------------------------------------------- */
+const $ = (id) => document.getElementById(id);
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// Escape text and turn `code` spans into <code>.
+function fmt(s) {
+  const esc = s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  return esc.replace(/`([^`]+)`/g, "<code>$1</code>");
+}
+
+// Returns a copy of the question with options shuffled (except True/False).
+function prepare(q) {
+  if (q.type === "tf") return Object.assign({}, q, { shown: q.options.slice(), correctShown: q.answer });
+  const order = shuffle(q.options.map((text, i) => ({ text, i })));
+  return Object.assign({}, q, {
+    shown: order.map((o) => o.text),
+    correctShown: order.findIndex((o) => o.i === q.answer)
+  });
+}
+
+/* ---------------------------------------------------------------
+   Quiz state
+---------------------------------------------------------------- */
+let deck = [];          // prepared questions for the current round
+let pos = 0;            // index into deck
+let correctCount = 0;
+let answered = false;
+let missed = [];        // original question objects missed this round
+let round = 1;          // 1 = full quiz, 2+ = retry rounds
+let firstScore = null;  // score from the full 20-question run
+
+function show(id) {
+  ["screen-start", "screen-quiz", "screen-results"].forEach((s) => $(s).classList.toggle("hidden", s !== id));
+  window.scrollTo(0, 0);
+}
+
+function startRound(questions, isRetry) {
+  deck = shuffle(questions).map(prepare);
+  pos = 0;
+  correctCount = 0;
+  missed = [];
+  round = isRetry ? round + 1 : 1;
+  if (!isRetry) firstScore = null;
+  show("screen-quiz");
+  renderQuestion();
+}
+
+function renderQuestion() {
+  answered = false;
+  const q = deck[pos];
+  $("progress-text").textContent = "Question " + (pos + 1) + " of " + deck.length + (round > 1 ? " · Retry" : "");
+  $("score-text").textContent = "Correct so far: " + correctCount;
+  $("bar-fill").style.width = (pos / deck.length * 100) + "%";
+  $("q-type").textContent = q.type === "tf" ? "True / False" : "Multiple choice";
+  $("q-text").innerHTML = fmt(q.q);
+
+  const list = $("options");
+  list.innerHTML = "";
+  q.shown.forEach((text, i) => {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "option";
+    b.dataset.index = i;
+    b.innerHTML = '<span class="letter">' + (q.type === "tf" ? (i === 0 ? "T" : "F") : String.fromCharCode(65 + i)) +
+                  '</span><span class="opt-text">' + fmt(text) + '</span><span class="mark"></span>';
+    b.addEventListener("click", () => choose(i));
+    li.appendChild(b);
+    list.appendChild(li);
+  });
+
+  $("feedback").classList.add("hidden");
+  $("btn-next").classList.add("hidden");
+}
+
+function choose(i) {
+  if (answered) return;
+  answered = true;
+  const q = deck[pos];
+  const right = i === q.correctShown;
+  if (right) correctCount++; else missed.push(q);
+
+  document.querySelectorAll("#options .option").forEach((b) => {
+    const idx = Number(b.dataset.index);
+    b.disabled = true;
+    if (idx === q.correctShown) {
+      b.classList.add("correct");
+      b.querySelector(".mark").textContent = "✓ Correct answer";
+    } else if (idx === i) {
+      b.classList.add("wrong");
+      b.querySelector(".mark").textContent = "✗ Your answer";
+    }
+  });
+
+  const fb = $("feedback");
+  fb.className = "feedback " + (right ? "good" : "bad");
+  fb.innerHTML =
+    '<div class="verdict">' + (right ? "✓ Correct!" : "✗ Not quite.") + '</div>' +
+    '<div>' + fmt(q.why) + '</div>' +
+    '<p class="review">Review: Week ' + q.week + ", " + fmt(q.slide) + '</p>';
+
+  $("score-text").textContent = "Correct so far: " + correctCount;
+  $("bar-fill").style.width = ((pos + 1) / deck.length * 100) + "%";
+
+  const next = $("btn-next");
+  next.textContent = pos === deck.length - 1 ? "See my results" : "Next question";
+  next.classList.remove("hidden");
+  next.focus();
+}
+
+function next() {
+  if (!answered) return;
+  if (pos === deck.length - 1) return showResults();
+  pos++;
+  renderQuestion();
+}
+
+function showResults() {
+  const total = deck.length;
+  if (round === 1) firstScore = correctCount;
+
+  $("res-title").textContent = round === 1 ? "Your results" : "Retry results";
+  $("res-score").textContent = correctCount + " / " + total;
+  const pct = Math.round(correctCount / total * 100);
+  let sub = pct + "% correct";
+  if (round > 1 && firstScore !== null) sub += " on the questions you missed. First try on the full quiz: " + firstScore + " of 20.";
+  $("res-sub").textContent = sub;
+
+  // Per-week breakdown for this round
+  const weeks = {};
+  deck.forEach((q) => { weeks[q.week] = weeks[q.week] || { right: 0, total: 0 }; weeks[q.week].total++; });
+  deck.forEach((q) => { if (!missed.includes(q)) weeks[q.week].right++; });
+  const grid = $("res-weeks");
+  grid.innerHTML = "";
+  Object.keys(weeks).sort().forEach((w) => {
+    const d = document.createElement("div");
+    d.className = "week-box";
+    d.innerHTML = '<div class="wk">Week ' + w + '</div><div class="wv">' + weeks[w].right + " of " + weeks[w].total + "</div>";
+    grid.appendChild(d);
+  });
+
+  // Missed questions
+  const list = $("res-missed");
+  list.innerHTML = "";
+  missed.slice().sort((a, b) => a.week - b.week).forEach((q) => {
+    const li = document.createElement("li");
+    li.innerHTML = '<div class="mq">' + fmt(q.q) + '</div>' +
+      '<div class="ma">Answer: ' + fmt(q.shown[q.correctShown]) + '</div>' +
+      '<div class="mw">Review: Week ' + q.week + ", " + fmt(q.slide) + '</div>';
+    list.appendChild(li);
+  });
+  $("res-missed-wrap").classList.toggle("hidden", missed.length === 0);
+
+  const retry = $("btn-retry");
+  if (missed.length > 0) {
+    retry.textContent = "Retry the " + missed.length + " I missed";
+    retry.classList.remove("hidden");
+  } else {
+    retry.classList.add("hidden");
+    $("res-sub").textContent += round === 1 ? " Perfect score!" : " You got every one this time!";
+  }
+
+  $("bar-fill").style.width = "100%";
+  show("screen-results");
+}
+
+/* ---------------------------------------------------------------
+   Wire up
+---------------------------------------------------------------- */
+$("btn-start").addEventListener("click", () => startRound(QUESTIONS, false));
+$("btn-next").addEventListener("click", next);
+$("btn-retry").addEventListener("click", () => {
+  // Strip the per-run fields so the missed questions get a fresh shuffle.
+  const again = missed.map((q) => QUESTIONS.find((orig) => orig.q === q.q));
+  startRound(again, true);
+});
+$("btn-restart").addEventListener("click", () => startRound(QUESTIONS, false));
+
+// Keyboard: press 1-4 (or A-D, T/F) to answer.
+document.addEventListener("keydown", (e) => {
+  if ($("screen-quiz").classList.contains("hidden") || answered || e.metaKey || e.ctrlKey || e.altKey) return;
+  const q = deck[pos];
+  const k = e.key.toLowerCase();
+  let i = -1;
+  if (q.type === "tf") i = k === "t" || k === "1" ? 0 : k === "f" || k === "2" ? 1 : -1;
+  else i = "1234".indexOf(k) >= 0 ? "1234".indexOf(k) : "abcd".indexOf(k);
+  if (i >= 0 && i < q.shown.length) choose(i);
+});
+</script>
+</body>
+</html>
